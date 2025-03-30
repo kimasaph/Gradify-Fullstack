@@ -1,9 +1,14 @@
 import { LoginForm } from "@/components/login-form"
 import { GalleryVerticalEnd } from "lucide-react"
-import loginImg from "@/assets/Learning-cuate.svg"
+import loginImg from "@/assets/learning-animate.svg"
+import { useRef } from "react"
+import { motion } from "motion/react"
+
 export default function LoginPage() {
+  const ref = useRef(null)
   return (
-    <div className="grid min-h-svh lg:grid-cols-2">
+    <div 
+      className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
           <a href="#" className="flex items-center gap-2 font-medium">
@@ -19,15 +24,27 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-center relative justify-center bg-primary shadow-2xs">
-        <div className="flex flex-col h-auto items-center justify-center text-white gap-2">
-            <h1 className="text-7xl font-bold">Gradify</h1>
+      <div className="hidden lg:flex flex-col items-center relative justify-center bg-primary shadow-2xs">
+        <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              transition: {
+                delay: 0.3,
+                duration: 0.6,
+                ease: "easeOut",
+              },
+            }}
+            className="flex flex-col h-auto items-center justify-center text-white gap-2"
+          >
+            <h1 className="text-6xl font-bold">Gradify</h1>
             <h3 className="text-xl font-bold italic">Learning Reoptimized</h3>
-        </div>
+        </motion.div>
         <img
           src={loginImg}
           alt="Image"
-          className="w-128 h-128"
+          className="animated w-128 h-128"
         />
       </div>
     </div>

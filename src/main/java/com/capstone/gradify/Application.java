@@ -33,6 +33,10 @@ public class Application {
         System.setProperty("EMAIL_PORT", Objects.requireNonNull(dotenv.get("EMAIL_PORT")));
         System.setProperty("EMAIL_USERNAME", Objects.requireNonNull(dotenv.get("EMAIL_USERNAME")));
         System.setProperty("EMAIL_PASSWORD", Objects.requireNonNull(dotenv.get("EMAIL_PASSWORD")));
+        System.setProperty("microsoft.graph.client.id", Objects.requireNonNull(dotenv.get("MICROSOFT_GRAPH_CLIENT_ID")));
+        System.setProperty("microsoft.graph.client.secret", Objects.requireNonNull(dotenv.get("MICROSOFT_GRAPH_CLIENT_SECRET")));
+        System.setProperty("microsoft.graph.tenant.id", Objects.requireNonNull(dotenv.get("MICROSOFT_GRAPH_TENANT_ID")));
+
         SpringApplication.run(Application.class, args);
     }
 }

@@ -11,6 +11,9 @@ import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.capstone.gradify.Entity.user.StudentEntity;
+import com.capstone.gradify.Entity.records.ClassSpreadsheet;
+import com.capstone.gradify.Repository.records.ClassSpreadsheetRepository;
+
 
 import java.util.*;
 
@@ -24,6 +27,8 @@ public class RecordsService {
     private GradingSchemeService gradingSchemeService;
     @Autowired
     private ClassService classService;
+    @Autowired
+    private ClassSpreadsheetRepository classSpreadsheetRepository;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -635,16 +640,67 @@ public class RecordsService {
         return gradeRecordsRepository.findByStudent_UserId(studentId);
     }
 
+    // Modify getStudentCourseGrades
     public Map<String, Object> getStudentCourseGrades(int studentId, int classId) {
         List<GradeRecordsEntity> gradeRecords = gradeRecordsRepository.findByStudent_UserIdAndClassRecord_ClassEntity_ClassId(studentId, classId);
-
         Map<String, Object> result = new HashMap<>();
-        if (!gradeRecords.isEmpty() && gradeRecords.get(0).getGrades() != null) {
-            result.put("grades", gradeRecords.get(0).getGrades());
-            result.put("assessmentMaxValues", gradeRecords.get(0).getClassRecord().getAssessmentMaxValues());
-        } else {
+
+        if (gradeRecords.isEmpty() || gradeRecords.get(0).getClassRecord() == null) {
             result.put("grades", Collections.emptyMap());
             result.put("assessmentMaxValues", Collections.emptyMap());
+            result.put("message", "No grade records or associated spreadsheet found for this student in this class.");
+            return result;
+        }
+
+        GradeRecordsEntity studentGradeRecord = gradeRecords.get(0);
+        ClassSpreadsheet classSpreadsheet = studentGradeRecord.getClassRecord();
+        // If classSpreadsheet is lazy-loaded and not fetched, you might need to fetch it explicitly if not already.
+        // However, since GradeRecordsEntity has a ManyToOne to ClassSpreadsheet, it should be available.
+        // If classSpreadsheet itself is null on studentGradeRecord.getClassRecord(), that's an issue with data integrity or how it was saved.
+        // For safety, let's assume it might be null and try to fetch it if gradeRecords.get(0).getClassRecord().getId() is available.
+        // This part depends on your exact JPA setup and how ClassSpreadsheet is associated.
+        // A simpler approach might be to ensure ClassSpreadsheet is always eagerly fetched with GradeRecordsEntity or fetched based on classId
+        // For this example, we'll assume studentGradeRecord.getClassRecord() gives us the necessary ClassSpreadsheet.
+
+        if (classSpreadsheet == null) { // Defensive check
+            // Attempt to find the spreadsheet via the class entity if classRecord on GradeRecord is somehow not populated.
+            // This might indicate a need to adjust how GradeRecords are linked or fetched.
+            List<ClassSpreadsheet> spreadsheets = classSpreadsheetRepository.findByClassEntity_ClassId(classId);
+            if (!spreadsheets.isEmpty()) {
+                classSpreadsheet = spreadsheets.get(0); // Assuming one spreadsheet per class for this logic
+            } else {
+                result.put("grades", Collections.emptyMap());
+                result.put("assessmentMaxValues", Collections.emptyMap());
+                result.put("message", "Spreadsheet configuration for this class not found.");
+                return result;
+            }
+        }
+
+
+        List<String> visibleColumns = classSpreadsheet.getStudentVisibleColumns();
+        Map<String, String> originalGrades = studentGradeRecord.getGrades() != null ? studentGradeRecord.getGrades() : Collections.emptyMap();
+        Map<String, Integer> originalMaxValues = classSpreadsheet.getAssessmentMaxValues() != null ? classSpreadsheet.getAssessmentMaxValues() : Collections.emptyMap();
+
+        if (visibleColumns == null || visibleColumns.isEmpty()) {
+            // If no columns are configured as visible, return empty or a specific message
+            result.put("grades", Collections.emptyMap());
+            result.put("assessmentMaxValues", Collections.emptyMap());
+            result.put("message", "No columns configured for student view by the teacher.");
+        } else {
+            Map<String, String> filteredGrades = new HashMap<>();
+            Map<String, Integer> filteredMaxValues = new HashMap<>();
+
+            for (String column : visibleColumns) {
+                if (originalGrades.containsKey(column)) {
+                    filteredGrades.put(column, originalGrades.get(column));
+                }
+                // Also filter assessmentMaxValues to only include visible columns
+                if (originalMaxValues.containsKey(column)) {
+                    filteredMaxValues.put(column, originalMaxValues.get(column));
+                }
+            }
+            result.put("grades", filteredGrades);
+            result.put("assessmentMaxValues", filteredMaxValues);
         }
         return result;
     }

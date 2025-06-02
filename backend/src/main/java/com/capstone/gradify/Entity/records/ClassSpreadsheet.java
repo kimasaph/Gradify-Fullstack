@@ -40,4 +40,9 @@ public class ClassSpreadsheet {
     @JsonManagedReference
     private List<GradeRecordsEntity> gradeRecords = new ArrayList<>();
 
+    // +++ New Field +++
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<String> studentVisibleColumns;
+    // +++++++++++++++++
 }

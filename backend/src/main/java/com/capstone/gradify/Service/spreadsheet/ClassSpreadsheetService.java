@@ -36,40 +36,25 @@ public class ClassSpreadsheetService {
         super();
     }
 
-    public ClassSpreadsheet saveRecord(String filename, TeacherEntity teacher,
-                                       List<Map<String, String>> records, ClassEntity classEntity, Map<String, Integer> maxAssessmentValues) {
-        ClassSpreadsheet spreadsheet = new ClassSpreadsheet();
-        spreadsheet.setFileName(filename);
-        spreadsheet.setUploadedBy(teacher);
-        spreadsheet.setClassName(classEntity.getClassName());
-        spreadsheet.setClassEntity(classEntity);
-        spreadsheet.setAssessmentMaxValues(maxAssessmentValues);
+    public ClassSpreadsheet saveRecord(String fileName, TeacherEntity teacher, List<Map<String, String>> records, Map<String, Integer> maxAssessmentValues) {
+        ClassSpreadsheet classSpreadsheet = new ClassSpreadsheet();
+        classSpreadsheet.setFileName(fileName);
+        classSpreadsheet.setUploadedBy(teacher);
+        classSpreadsheet.setAssessmentMaxValues(maxAssessmentValues);
+        classSpreadsheet.setClassName(extractFileName(fileName));
 
-        // +++ Initialize studentVisibleColumns for new spreadsheets +++
-        spreadsheet.setStudentVisibleColumns(new ArrayList<>()); // Default to no columns visible
-        // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-        List<GradeRecordsEntity> gradeRecords = new ArrayList<>();
+        // Logic to save the records to the database
+        // For example, you can iterate through the records and save each one
         for (Map<String, String> record : records) {
-            String studentFirstName = record.get("First Name");
-            String studentLastName = record.get("Last Name");
-            String studentNumber = record.get("Student Number");
+            GradeRecordsEntity gradeRecord = new GradeRecordsEntity();
+            gradeRecord.setStudentNumber(record.get("Student Number"));
+            gradeRecord.setGrades(record);
+            gradeRecord.setClassRecord(classSpreadsheet);
 
-            if (studentNumber == null) {
-                studentNumber = record.get("StudentNumber"); // Alternative key
-            }
+            classSpreadsheet.getGradeRecords().add(gradeRecord);
 
-            GradeRecordsEntity gradeRecord = createGradeRecordWithStudentAssociation(
-                    studentNumber,
-                    studentFirstName,
-                    studentLastName,
-                    spreadsheet, // Pass the spreadsheet object being built
-                    record
-            );
-            gradeRecords.add(gradeRecord);
         }
-        spreadsheet.setGradeRecords(gradeRecords);
-        return classSpreadsheetRepository.save(spreadsheet);
+        return classSpreadsheetRepository.save(classSpreadsheet);
     }
 
     public Optional<ClassSpreadsheet> getClassSpreadsheetById(Long id){
@@ -360,6 +345,53 @@ public class ClassSpreadsheetService {
         return gradeRecordRepository.save(gradeRecord);
     }
 
+    public ClassSpreadsheet saveRecord(String filename, TeacherEntity teacher,
+                                       List<Map<String, String>> records, ClassEntity classEntity, Map<String, Integer> maxAssessmentValues) {
+        ClassSpreadsheet spreadsheet = new ClassSpreadsheet();
+        spreadsheet.setFileName(filename);
+        spreadsheet.setUploadedBy(teacher);
+        spreadsheet.setClassName(classEntity.getClassName()); // Set the class name from ClassEntity
+        spreadsheet.setClassEntity(classEntity);
+        spreadsheet.setAssessmentMaxValues(maxAssessmentValues);
+        // Create grade records
+        List<GradeRecordsEntity> gradeRecords = new ArrayList<>();
+        for (Map<String, String> record : records) {
+            String studentFirstName = record.get("First Name");
+            String studentLastName = record.get("Last Name");
+            String studentNumber = record.get("Student Number");
+
+//            if (studentName == null) {
+//                // Try common field names or patterns in your data
+//                studentName = record.get("Name") != null ? record.get("name") :
+//                        (record.get("fullName") != null ? record.get("fullName") :
+//                                (record.get("First Name") + " " + record.get("Last Name")));
+//            }
+
+            if (studentNumber == null) {
+                studentNumber = record.get("StudentNumber");
+            }
+
+            // Create the grade record with student association
+            GradeRecordsEntity gradeRecord = createGradeRecordWithStudentAssociation(
+                    studentNumber,
+                    studentFirstName,
+                    studentLastName,
+                    spreadsheet,
+                    record
+            );
+
+
+            gradeRecord.setGrades(record);
+
+            gradeRecords.add(gradeRecord);
+        }
+
+        spreadsheet.setGradeRecords(gradeRecords);
+
+
+        return classSpreadsheetRepository.save(spreadsheet);
+    }
+
     @Transactional
     public ClassSpreadsheet updateSpreadsheet(Long spreadsheetId, MultipartFile file, TeacherEntity teacher) throws IOException {
         // Fetch the existing spreadsheet
@@ -435,13 +467,5 @@ public class ClassSpreadsheetService {
         // Assuming you have a repository method for this
         // If not, you'll need to add one to your repository
         return classSpreadsheetRepository.findByClassEntity_ClassId(classId);
-    }
-
-    @Transactional
-    public ClassSpreadsheet updateStudentVisibleColumns(Long spreadsheetId, List<String> visibleColumns) {
-        ClassSpreadsheet spreadsheet = classSpreadsheetRepository.findById(spreadsheetId)
-                .orElseThrow(() -> new RuntimeException("ClassSpreadsheet not found with id: " + spreadsheetId));
-        spreadsheet.setStudentVisibleColumns(visibleColumns);
-        return classSpreadsheetRepository.save(spreadsheet);
     }
 }

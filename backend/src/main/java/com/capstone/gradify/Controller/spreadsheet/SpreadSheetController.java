@@ -15,9 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.List;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.*;
 
@@ -190,20 +187,4 @@ public class SpreadSheetController {
             
             return ResponseEntity.ok(response);
         }
-
-    // +++ New Endpoint for Column Visibility +++
-    @PutMapping("/{spreadsheetId}/column-visibility")
-    public ResponseEntity<?> setStudentVisibleColumns(
-            @PathVariable Long spreadsheetId,
-            @RequestBody List<String> visibleColumns) {
-        try {
-            ClassSpreadsheet updatedSpreadsheet = classSpreadsheetService.updateStudentVisibleColumns(spreadsheetId, visibleColumns);
-            return ResponseEntity.ok(updatedSpreadsheet);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating column visibility: " + e.getMessage());
-        }
-    }
-    // ++++++++++++++++++++++++++++++++++++++++
 }

@@ -2,6 +2,7 @@ package com.capstone.gradify.Controller.records;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -10,9 +11,13 @@ import com.capstone.gradify.Entity.user.StudentEntity;
 import com.capstone.gradify.Entity.user.TeacherEntity;
 import com.capstone.gradify.Repository.user.TeacherRepository;
 import com.capstone.gradify.Service.RecordsService;
+import com.capstone.gradify.Service.ReportService;
 import com.capstone.gradify.dto.student.StudentDTO;
+import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.capstone.gradify.Entity.records.ClassEntity;
@@ -35,8 +40,10 @@ public class ClassController {
     private ClassService classService;
     @Autowired
     private RecordsService recordsService;
-     @Autowired
+    @Autowired
     private TeacherRepository teacherRepository;
+    @Autowired
+    private ReportService reportService;
 
     @PostMapping("/createclass")
     public ResponseEntity<Object> createClass(
@@ -171,6 +178,21 @@ public class ClassController {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(studentDTOs);
+    }
+
+    @PostMapping("/{classId}/send-grades")
+    @PreAuthorize("hasAuthority('TEACHER')")
+    public ResponseEntity<?> sendGradesForColumn(@PathVariable int classId, @RequestBody Map<String, String> payload) {
+        String columnName = payload.get("columnName");
+        if (columnName == null || columnName.isEmpty()) {
+            return ResponseEntity.badRequest().body("Column name is required.");
+        }
+        try {
+            recordsService.sendGradesForColumnToStudents(classId, columnName);
+            return ResponseEntity.ok().body("Grades for column '" + columnName + "' sent successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error sending grades: " + e.getMessage());
+        }
     }
 
     private StudentDTO convertToDTO(StudentEntity student) {

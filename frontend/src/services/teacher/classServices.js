@@ -183,3 +183,13 @@ export const getStudentByClass = async (classId, header) => {
         throw error;
     }
 }
+
+export const sendColumnGrades = async (classId, columnName, header) => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/${classId}/send-grades`, { columnName }, { headers: header });
+        return response.data;
+    } catch (error) {
+        console.error("Error sending column grades:", error);
+        throw error;
+    }
+};

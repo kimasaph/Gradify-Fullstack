@@ -7,13 +7,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Save } from "lucide-react";
+import { Save, Send, Loader2 } from "lucide-react"; // Import Send and Loader2 icons
 import { useAuth } from "@/contexts/authentication-context";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import {
-  getSpreadsheetByClassId,
-} from "@/services/teacher/classServices";
+import { getSpreadsheetByClassId, sendColumnGrades } from "@/services/teacher/classServices"; // Import sendColumnGrades
+import toast from "react-hot-toast";
 
 export function GradeEditTable({ classId }) {
   const { currentUser, getAuthHeader } = useAuth();
@@ -24,6 +23,8 @@ export function GradeEditTable({ classId }) {
   const [editedData, setEditedData] = useState({});
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSendingGrades, setIsSendingGrades] = useState(false);
+  const [sendingColumn, setSendingColumn] = useState(null);
   const excludedFields = ["Student Number", "First Name", "Last Name"];
 
   useEffect(() => {
@@ -65,11 +66,8 @@ export function GradeEditTable({ classId }) {
     fetchSpreadsheet();
   }, [classId, getAuthHeader]);
 
-  // Get all unique column headers for the grades
   const getGradeColumns = () => {
     if (!spreadsheet?.gradeRecords?.length) return [];
-
-    // Collect all unique keys from all grade records
     const allKeys = new Set();
     spreadsheet.gradeRecords.forEach((record) => {
       if (record && record.grades) {
@@ -80,8 +78,6 @@ export function GradeEditTable({ classId }) {
         });
       }
     });
-
-    // Convert to array and sort
     return Array.from(allKeys).sort();
   };
 
@@ -93,6 +89,22 @@ export function GradeEditTable({ classId }) {
         [column]: value,
       },
     }));
+  };
+
+  const handleSendGrades = async (column) => {
+    setIsSendingGrades(true);
+    setSendingColumn(column);
+    const toastId = toast.loading(`Sending "${column}" grades to students...`);
+
+    try {
+      await sendColumnGrades(classId, column, getAuthHeader());
+      toast.success(`"${column}" grades have been sent and students notified.`, { id: toastId });
+    } catch (error) {
+      toast.error(`Failed to send grades for "${column}": ${error.message}`, { id: toastId });
+    } finally {
+      setIsSendingGrades(false);
+      setSendingColumn(null);
+    }
   };
 
   const handleSave = async () => {
@@ -188,7 +200,22 @@ export function GradeEditTable({ classId }) {
               <TableHead className="font-bold">Last Name</TableHead>
               {gradeColumns.map((column) => (
                 <TableHead key={column} className="font-bold">
-                  {column}
+                  <div className="flex items-center justify-between">
+                    <span>{column}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSendGrades(column)}
+                      disabled={isSendingGrades}
+                      title={`Send ${column} grades`}
+                    >
+                      {isSendingGrades && sendingColumn === column ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </TableHead>
               ))}
             </TableRow>

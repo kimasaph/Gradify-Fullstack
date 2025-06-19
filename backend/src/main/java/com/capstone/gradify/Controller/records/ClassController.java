@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import com.capstone.gradify.Entity.records.ClassSpreadsheet;
 import com.capstone.gradify.Entity.user.StudentEntity;
 import com.capstone.gradify.Entity.user.TeacherEntity;
+import com.capstone.gradify.Repository.user.StudentRepository;
 import com.capstone.gradify.Repository.user.TeacherRepository;
 import com.capstone.gradify.Service.RecordsService;
 import com.capstone.gradify.Service.ReportService;
@@ -44,6 +45,8 @@ public class ClassController {
     private TeacherRepository teacherRepository;
     @Autowired
     private ReportService reportService;
+    @Autowired
+    private StudentRepository studentRepository;
 
     @PostMapping("/createclass")
     public ResponseEntity<Object> createClass(
@@ -93,6 +96,29 @@ public class ClassController {
             return ResponseEntity.status(500).body("Error creating class: " + e.getMessage());
         }
     }
+
+    @GetMapping("/getallstudents")
+    public ResponseEntity<List<StudentDTO>> getAllStudents() {
+        List<StudentEntity> students = studentRepository.findAll();
+        List<StudentDTO> studentDTOs = students.stream()
+                        .map(this::convertToDTO)
+                        .collect(Collectors.toList());
+        return ResponseEntity.ok(studentDTOs);
+    }
+
+    @PostMapping("/{classId}/addstudent/{studentId}")
+    public ResponseEntity<Object> addStudentToClass(@PathVariable int classId, @PathVariable int studentId) {
+                ClassEntity classEntity = classService.getClassById(classId);
+                if (classEntity == null) {
+                        return ResponseEntity.status(404).body("Class not found");
+                    }
+                StudentEntity studentEntity = studentRepository.findById(studentId).orElse(null);
+                if (studentEntity == null) {
+                        return ResponseEntity.status(404).body("Student not found");
+                    }
+                classService.addStudentToClass(classEntity, studentEntity);
+                return ResponseEntity.status(200).body("Student added to class successfully");
+            }
 
     @GetMapping("/getallclasses")
     public ResponseEntity<Object> getAllClasses() {

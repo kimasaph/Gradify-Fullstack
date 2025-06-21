@@ -1,5 +1,6 @@
 package com.capstone.gradify.Service;
 
+import com.capstone.gradify.Controller.spreadsheet.SpreadSheetController;
 import com.capstone.gradify.Entity.records.*;
 import com.capstone.gradify.Entity.user.TeacherEntity;
 import com.capstone.gradify.Repository.records.ClassRepository;
@@ -1056,6 +1057,18 @@ public class RecordsService {
 
                 reportService.createReport(reportDTO);
             }
+        }
+    }
+
+    @Transactional
+    public void updateGrades(List<SpreadSheetController.UpdateGradesRequest> updatedRecords) {
+        for (SpreadSheetController.UpdateGradesRequest req : updatedRecords) {
+            GradeRecordsEntity record = gradeRecordsRepository.findById(req.getGradeRecordId())
+                    .orElseThrow(() -> new RuntimeException("Grade record not found with id: " + req.getGradeRecordId()));
+
+            // Update the grades map
+            record.setGrades(req.getGrades());
+            gradeRecordsRepository.save(record);
         }
     }
 

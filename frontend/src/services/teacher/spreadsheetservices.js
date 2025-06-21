@@ -181,3 +181,20 @@ export const checkIfSpreadsheetExists = async (fileName, teacherId, headers) => 
         throw error;
     }
 };
+
+export const updateGrades = async (updatedRecords, headers) => {
+    const response = await fetch(`${API_BASE_URL}/update-grades`, {
+        method: 'PUT',
+        headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedRecords),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to update grades');
+    }
+    return response.text();
+};

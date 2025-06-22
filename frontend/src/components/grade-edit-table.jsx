@@ -32,12 +32,14 @@ export function GradeEditTable({ classId }) {
 
   // Add useMutation hook for updating grades
   const updateGradesMutation = useMutation({
-    mutationFn: updateGrades,
+    mutationFn: (gradesToUpdate) => {
+      // This ensures getAuthHeader() is called and passed to the service function
+      return updateGrades(gradesToUpdate, getAuthHeader());
+    },
     onSuccess: (data) => {
       toast.success(data || "Grades saved successfully!");
       setSaveSuccess(true);
       setEditedData({}); // Clear changes after saving
-      // Reset success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
       queryClient.invalidateQueries({ queryKey: ['spreadsheet', classId] });
     },
@@ -130,7 +132,7 @@ export function GradeEditTable({ classId }) {
   const handleSave = async () => {
     if (!spreadsheet || !spreadsheet.gradeRecords) return;
 
-    // Check if there are any changes to save
+    // This logic correctly finds that changes were made.
     const hasChanges = Object.keys(editedData).some(studentId => {
       const originalRecord = spreadsheet.gradeRecords.find(
         record => record.grades && record.grades["Student Number"] === studentId
@@ -147,23 +149,29 @@ export function GradeEditTable({ classId }) {
       return;
     }
 
-    // Transform editedData to the format expected by updateGrades service
     const gradesToUpdate = [];
     Object.keys(editedData).forEach(studentId => {
       const originalRecord = spreadsheet.gradeRecords.find(
         record => record.grades && record.grades["Student Number"] === studentId
       );
       
-      if (originalRecord && originalRecord.gradeRecordId) {
+      // --- THE FIX ---
+      // We check for 'originalRecord.id' instead of 'originalRecord.gradeRecordId'.
+      if (originalRecord && originalRecord.id) {
         gradesToUpdate.push({
-          gradeRecordId: originalRecord.gradeRecordId,
+          // The backend expects the field to be named 'gradeRecordId' in the request,
+          // so we map the value from 'originalRecord.id' to it.
+          gradeRecordId: originalRecord.id, 
           grades: editedData[studentId]
         });
       }
     });
 
     if (gradesToUpdate.length > 0) {
+      // With the fix above, this will now run correctly.
       updateGradesMutation.mutate(gradesToUpdate);
+    } else {
+        // This block should no longer be reached.
     }
   };
 
